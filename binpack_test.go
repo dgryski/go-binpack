@@ -11,10 +11,20 @@ import (
 
 func TestStruct(t *testing.T) {
 
-	a := struct {
-		Slice []int8 `lenprefix:"int16"`
-	}{
-		[]int8{0, 1, 2, 3, 4},
+	type B struct {
+		Int8          byte
+		Int16         int16
+		EmbeddedSlice []byte `binpack:"lenprefix=int16"`
+	}
+
+	type A struct {
+		Slice      []B     `binpack:"lenprefix=int16"`
+		EmptySlice []int16 `binpack:"lenprefix=int16"`
+	}
+
+	a := A{
+		[]B{{0, 1, []byte("hello")}, {2, 3, []byte("world")}},
+		[]int16{},
 	}
 
 	b := &bytes.Buffer{}
@@ -29,9 +39,7 @@ func TestStruct(t *testing.T) {
 		log.Printf("\n%s", hex.Dump(b.Bytes()))
 	}
 
-	var a2 struct {
-		Slice []int8 `lenprefix:"int16"`
-	}
+	var a2 A
 
 	err = Read(b, binary.LittleEndian, &a2)
 

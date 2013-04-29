@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"reflect"
+	"strings"
 )
 
 func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
@@ -41,8 +42,8 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 			// if we have a slice embedded in a struct, get the struct tag that tells us how to write the (unknown) length before the contents
 			if f.Type.Kind() == reflect.Slice {
 				slen := fval.Len()
-				lenprefix := f.Tag.Get("lenprefix")
-				switch lenprefix {
+				opts := parseTag(f.Tag)
+				switch opts.lenprefix {
 				case "":
 					// won't know how to unpack :(
 					return errors.New("struct with embedded slice missing value for lenprefix tag")
@@ -71,7 +72,7 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 				case "int64":
 					Write(w, byteorder, int64(slen))
 				default:
-					return errors.New("unknown value for lenprefix: " + lenprefix)
+					return errors.New("unknown value for lenprefix: " + opts.lenprefix)
 				}
 			}
 
@@ -97,6 +98,24 @@ func Read(r io.Reader, byteorder binary.ByteOrder, data interface{}) error {
 
 	return unpack(r, byteorder, v.Elem())
 
+}
+
+type packopts struct {
+	lenprefix string
+}
+
+func parseTag(tag reflect.StructTag) packopts {
+	var opts packopts
+
+	bpTag := tag.Get("binpack")
+
+	for _, t := range strings.Split(string(bpTag), ",") {
+		if strings.HasPrefix(t, "lenprefix=") {
+			opts.lenprefix = strings.TrimPrefix(t, "lenprefix=")
+		}
+	}
+
+	return opts
 }
 
 func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
@@ -167,10 +186,11 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 			if f.Type.Kind() == reflect.Slice {
 
 				var slen int
-				lenprefix := f.Tag.Get("lenprefix")
-				switch lenprefix {
+				opts := parseTag(f.Tag)
+				switch opts.lenprefix {
 				case "":
-					// nothing
+					panic("no length prefix specified for field")
+
 				case "uint8":
 					var n uint8
 					Read(r, byteorder, &n)
@@ -211,7 +231,7 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 					Read(r, byteorder, &n)
 					slen = int(n)
 				default:
-					return errors.New("unknown value for lenprefix: " + lenprefix)
+					return errors.New("unknown value for lenprefix: " + opts.lenprefix)
 				}
 
 				if fval.IsNil() {
