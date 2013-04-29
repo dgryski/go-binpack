@@ -195,42 +195,42 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 
 				case "uint8":
 					var n uint8
-					Read(r, byteorder, &n)
+					binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "uint16":
 					var n uint16
-					Read(r, byteorder, &n)
+					binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "uint32":
 					var n uint32
-					Read(r, byteorder, &n)
+					binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "uint64":
 					var n uint64
-					Read(r, byteorder, &n)
+					binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "int8":
 					var n int8
-					Read(r, byteorder, &n)
+					binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "int16":
 					var n int16
-					Read(r, byteorder, &n)
+					binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "int32":
 					var n int32
-					Read(r, byteorder, &n)
+					binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "int64":
 					var n int64
-					Read(r, byteorder, &n)
+					binary.Read(r, byteorder, &n)
 					slen = int(n)
 				default:
 					return errors.New("unknown value for lenprefix: " + opts.lenprefix)
