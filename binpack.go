@@ -23,6 +23,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"math"
 	"reflect"
 	"strings"
 )
@@ -35,7 +36,7 @@ var ErrSliceTooSmall = errors.New("not enough space in slice")
 func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
 	switch data.(type) {
-	case uint8, uint16, uint32, uint64, int8, int16, int32, int64:
+	case uint8, uint16, uint32, uint64, int8, int16, int32, int64, float32, float64:
 		return binary.Write(w, byteorder, data)
 	}
 
@@ -120,7 +121,7 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 func Read(r io.Reader, byteorder binary.ByteOrder, data interface{}) error {
 
 	switch data.(type) {
-	case *uint8, *uint16, *uint32, *uint64, *int8, *int16, *int32, *int64:
+	case *uint8, *uint16, *uint32, *uint64, *int8, *int16, *int32, *int64, *float32, *float64:
 		return binary.Read(r, byteorder, data)
 	}
 
@@ -192,6 +193,16 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 		var n int64
 		err = binary.Read(r, byteorder, &n)
 		v.SetInt(int64(n))
+
+	case reflect.Float32:
+		var n uint32
+		err = binary.Read(r, byteorder, &n)
+		v.SetFloat(float64(math.Float32frombits(n)))
+
+	case reflect.Float64:
+		var n uint64
+		err = binary.Read(r, byteorder, &n)
+		v.SetFloat(math.Float64frombits(n))
 
 	case reflect.Array, reflect.Slice:
 		l := v.Len()
