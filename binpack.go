@@ -9,6 +9,7 @@ import (
 )
 
 var ErrMissingLenPrefix = errors.New("struct with embedded slice missing value for lenprefix tag")
+var ErrUnknownLenPrefix = errors.New("unknown lenprefix pack type")
 
 func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
@@ -45,36 +46,41 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 			if f.Type.Kind() == reflect.Slice {
 				slen := fval.Len()
 				opts := parseTag(f.Tag)
+				var err error
 				switch opts.lenprefix {
 				case "":
-					return ErrMissingLenPrefix
+					err = ErrMissingLenPrefix
 
-				case "varint":
-					panic("not implemented")
 				case "uint8":
-					Write(w, byteorder, uint8(slen))
+					err = Write(w, byteorder, uint8(slen))
 
 				case "uint16":
-					Write(w, byteorder, uint16(slen))
+					err = Write(w, byteorder, uint16(slen))
 
 				case "uint32":
-					Write(w, byteorder, uint32(slen))
+					err = Write(w, byteorder, uint32(slen))
 
 				case "uint64":
-					Write(w, byteorder, uint64(slen))
+					err = Write(w, byteorder, uint64(slen))
+
 				case "int8":
-					Write(w, byteorder, int8(slen))
+					err = Write(w, byteorder, int8(slen))
 
 				case "int16":
-					Write(w, byteorder, int16(slen))
+					err = Write(w, byteorder, int16(slen))
 
 				case "int32":
-					Write(w, byteorder, int32(slen))
+					err = Write(w, byteorder, int32(slen))
 
 				case "int64":
-					Write(w, byteorder, int64(slen))
+					err = Write(w, byteorder, int64(slen))
+
 				default:
-					return errors.New("unknown value for lenprefix: " + opts.lenprefix)
+					err = ErrUnknownLenPrefix
+				}
+
+				if err != nil {
+					return err
 				}
 			}
 
@@ -122,45 +128,47 @@ func parseTag(tag reflect.StructTag) packopts {
 
 func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 
+	var err error
+
 	switch v.Kind() {
 	case reflect.Uint8:
 		var n uint8
-		binary.Read(r, byteorder, &n)
+		err = binary.Read(r, byteorder, &n)
 		v.SetUint(uint64(n))
 
 	case reflect.Uint16:
 		var n uint16
-		binary.Read(r, byteorder, &n)
+		err = binary.Read(r, byteorder, &n)
 		v.SetUint(uint64(n))
 
 	case reflect.Uint32:
 		var n uint32
-		binary.Read(r, byteorder, &n)
+		err = binary.Read(r, byteorder, &n)
 		v.SetUint(uint64(n))
 
 	case reflect.Uint64:
 		var n uint64
-		binary.Read(r, byteorder, &n)
+		err = binary.Read(r, byteorder, &n)
 		v.SetUint(uint64(n))
 
 	case reflect.Int8:
 		var n int8
-		binary.Read(r, byteorder, &n)
+		err = binary.Read(r, byteorder, &n)
 		v.SetInt(int64(n))
 
 	case reflect.Int16:
 		var n int16
-		binary.Read(r, byteorder, &n)
+		err = binary.Read(r, byteorder, &n)
 		v.SetInt(int64(n))
 
 	case reflect.Int32:
 		var n int32
-		binary.Read(r, byteorder, &n)
+		err = binary.Read(r, byteorder, &n)
 		v.SetInt(int64(n))
 
 	case reflect.Int64:
 		var n int64
-		binary.Read(r, byteorder, &n)
+		err = binary.Read(r, byteorder, &n)
 		v.SetInt(int64(n))
 
 	case reflect.Array, reflect.Slice:
@@ -195,45 +203,50 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 
 				case "uint8":
 					var n uint8
-					binary.Read(r, byteorder, &n)
+					err = binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "uint16":
 					var n uint16
-					binary.Read(r, byteorder, &n)
+					err = binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "uint32":
 					var n uint32
-					binary.Read(r, byteorder, &n)
+					err = binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "uint64":
 					var n uint64
-					binary.Read(r, byteorder, &n)
+					err = binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "int8":
 					var n int8
-					binary.Read(r, byteorder, &n)
+					err = binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "int16":
 					var n int16
-					binary.Read(r, byteorder, &n)
+					err = binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "int32":
 					var n int32
-					binary.Read(r, byteorder, &n)
+					err = binary.Read(r, byteorder, &n)
 					slen = int(n)
 
 				case "int64":
 					var n int64
-					binary.Read(r, byteorder, &n)
+					err = binary.Read(r, byteorder, &n)
 					slen = int(n)
+
 				default:
-					return errors.New("unknown value for lenprefix: " + opts.lenprefix)
+					err = ErrUnknownLenPrefix
+				}
+
+				if err != nil {
+					return err
 				}
 
 				if fval.IsNil() {
@@ -244,10 +257,11 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 				if fval.Cap() < slen {
 					return errors.New("not enough space in slice")
 				}
+
 				fval.SetLen(slen) // handle case where they passed in a non-nil slice
 			}
 
-			err := unpack(r, byteorder, fval)
+			err = unpack(r, byteorder, fval)
 			if err != nil {
 				return err
 			}
@@ -257,5 +271,5 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 		return errors.New("unknown type: " + v.Type().Kind().String())
 	}
 
-	return nil
+	return err
 }
