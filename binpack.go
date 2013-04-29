@@ -19,6 +19,20 @@ int64, uint64.
 The pack and unpack routines skip fields with blank (_) field names
 and those for which the struct tag is "-"
 
+Note that slices may only be contained in a struct, not in other
+slices. This means that a declaration such as:
+
+   Field [][]byte `binpack:"lenprefix=uint8"`
+
+will fail to serialize properly.  However, since structs are encoded
+with zero padding, an equivalent declaration is:
+
+   Field []struct { InnerField []byte `binpack:"lenprefix="uint16"` } `binpack:"lenprefix="uint8"`
+
+The encoding of Field will be a uint8 indicating how many inner slices
+there are, and the inner []byte slices will be length-prefixed with a
+uint16
+
 */
 package binpack
 
