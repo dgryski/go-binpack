@@ -1,3 +1,22 @@
+/*
+
+Package binpack implements translation between numbers and byte
+sequences, similar to encoding/binary.  This package allows
+variable-length slices contained in structs to be packed and unpacked
+by adding a length to the byte stream.  The type of integer to use for
+the length is specified in the struct tag:
+
+For example,
+
+   Field []int32 `binpack:"lenprefix=int8"`
+
+indicates that during serialization, the value of Field will be
+preceeded by an int8 indicating how many elements follow.
+
+Valid prefix types are: int8, uint8, int16, uint16, int32, uint32,
+int64.
+
+*/
 package binpack
 
 import (
@@ -12,6 +31,7 @@ var ErrMissingLenPrefix = errors.New("struct with embedded slice missing value f
 var ErrUnknownLenPrefix = errors.New("unknown lenprefix pack type")
 var ErrSliceTooSmall = errors.New("not enough space in slice")
 
+// Write writes the binary representation of data to w.
 func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
 	switch data.(type) {
@@ -96,6 +116,7 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
 }
 
+// Read reads structured binary data from r into data.
 func Read(r io.Reader, byteorder binary.ByteOrder, data interface{}) error {
 
 	switch data.(type) {
