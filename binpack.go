@@ -10,6 +10,7 @@ import (
 
 var ErrMissingLenPrefix = errors.New("struct with embedded slice missing value for lenprefix tag")
 var ErrUnknownLenPrefix = errors.New("unknown lenprefix pack type")
+var ErrSliceTooSmall = errors.New("not enough space in slice")
 
 func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
@@ -255,7 +256,7 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 				}
 
 				if fval.Cap() < slen {
-					return errors.New("not enough space in slice")
+					return ErrSliceTooSmall
 				}
 
 				fval.SetLen(slen) // handle case where they passed in a non-nil slice
