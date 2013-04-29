@@ -17,7 +17,7 @@ Valid prefix types are: int8, uint8, int16, uint16, int32, uint32,
 int64, uint64.
 
 The pack and unpack routines skip fields with blank (_) field names
-and those for which the struct tag is "_"
+and those for which the struct tag is "-"
 
 */
 package binpack
