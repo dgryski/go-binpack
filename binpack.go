@@ -123,42 +123,42 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Uint8:
 		var n uint8
-		Read(r, byteorder, &n)
+		binary.Read(r, byteorder, &n)
 		v.SetUint(uint64(n))
 
 	case reflect.Uint16:
 		var n uint16
-		Read(r, byteorder, &n)
+		binary.Read(r, byteorder, &n)
 		v.SetUint(uint64(n))
 
 	case reflect.Uint32:
 		var n uint32
-		Read(r, byteorder, &n)
+		binary.Read(r, byteorder, &n)
 		v.SetUint(uint64(n))
 
 	case reflect.Uint64:
 		var n uint64
-		Read(r, byteorder, &n)
+		binary.Read(r, byteorder, &n)
 		v.SetUint(uint64(n))
 
 	case reflect.Int8:
 		var n int8
-		Read(r, byteorder, &n)
+		binary.Read(r, byteorder, &n)
 		v.SetInt(int64(n))
 
 	case reflect.Int16:
 		var n int16
-		Read(r, byteorder, &n)
+		binary.Read(r, byteorder, &n)
 		v.SetInt(int64(n))
 
 	case reflect.Int32:
 		var n int32
-		Read(r, byteorder, &n)
+		binary.Read(r, byteorder, &n)
 		v.SetInt(int64(n))
 
 	case reflect.Int64:
 		var n int64
-		Read(r, byteorder, &n)
+		binary.Read(r, byteorder, &n)
 		v.SetInt(int64(n))
 
 	case reflect.Array, reflect.Slice:
