@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var ErrMissingLenPrefix = errors.New("struct with embedded slice missing value for lenprefix tag")
+
 func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
 	switch data.(type) {
@@ -45,8 +47,8 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 				opts := parseTag(f.Tag)
 				switch opts.lenprefix {
 				case "":
-					// won't know how to unpack :(
-					return errors.New("struct with embedded slice missing value for lenprefix tag")
+					return ErrMissingLenPrefix
+
 				case "varint":
 					panic("not implemented")
 				case "uint8":
@@ -189,7 +191,7 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 				opts := parseTag(f.Tag)
 				switch opts.lenprefix {
 				case "":
-					panic("no length prefix specified for field")
+					return ErrMissingLenPrefix
 
 				case "uint8":
 					var n uint8
