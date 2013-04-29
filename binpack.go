@@ -14,7 +14,7 @@ indicates that during serialization, the value of Field will be
 preceeded by an int8 indicating how many elements follow.
 
 Valid prefix types are: int8, uint8, int16, uint16, int32, uint32,
-int64.
+int64, uint64.
 
 */
 package binpack
