@@ -16,6 +16,9 @@ preceeded by an int8 indicating how many elements follow.
 Valid prefix types are: int8, uint8, int16, uint16, int32, uint32,
 int64, uint64.
 
+The pack and unpack routines skip fields with blank (_) field names
+and those for which the struct tag is "_"
+
 */
 package binpack
 
@@ -132,6 +135,7 @@ func Read(r io.Reader, byteorder binary.ByteOrder, data interface{}) error {
 }
 
 type packopts struct {
+	skip      bool
 	lenprefix string
 }
 
@@ -141,6 +145,9 @@ func parseTag(tag reflect.StructTag) packopts {
 	bpTag := tag.Get("binpack")
 
 	for _, t := range strings.Split(string(bpTag), ",") {
+		if t == "-" {
+			opts.skip = true
+		}
 		if strings.HasPrefix(t, "lenprefix=") {
 			opts.lenprefix = strings.TrimPrefix(t, "lenprefix=")
 		}
@@ -219,7 +226,10 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 		l := typ.NumField()
 		for i := 0; i < l; i++ {
 			f := typ.Field(i)
-			if f.PkgPath != "" {
+
+			opts := parseTag(f.Tag)
+
+			if opts.skip || f.Name == "_" || f.PkgPath != "" {
 				continue
 			}
 
@@ -229,7 +239,6 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 			if f.Type.Kind() == reflect.Slice {
 
 				var slen int
-				opts := parseTag(f.Tag)
 				switch opts.lenprefix {
 				case "":
 					return ErrMissingLenPrefix

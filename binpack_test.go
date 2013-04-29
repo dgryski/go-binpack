@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestStruct(t *testing.T) {
+func TestStructs(t *testing.T) {
 
 	type B struct {
 		Int8          byte
@@ -29,9 +29,40 @@ func TestStruct(t *testing.T) {
 		[]float32{123.45, 543.21},
 	}
 
+	var a2 A
+
+	packUnpack(t, a, &a2, a)
+
+}
+
+func TestSkips(t *testing.T) {
+
+	type A struct {
+		Int8  uint8
+		_     uint32
+		Int16 int16
+	}
+
+	type B struct {
+		Int8   uint8
+		SkipMe uint32 `binpack:"-"`
+		Int16  int16
+	}
+
+	a := A{}
+	a.Int8 = 1
+	a.Int16 = 2
+	b := B{}
+	e := B{1, 0, 2}
+
+	packUnpack(t, a, &b, e)
+}
+
+func packUnpack(t *testing.T, s1 interface{}, s2 interface{}, e1 interface{}) {
+
 	b := &bytes.Buffer{}
 
-	err := Write(b, binary.LittleEndian, a)
+	err := Write(b, binary.LittleEndian, s1)
 
 	if err != nil {
 		t.Errorf("error packing: %s", err)
@@ -41,15 +72,16 @@ func TestStruct(t *testing.T) {
 		log.Printf("\n%s", hex.Dump(b.Bytes()))
 	}
 
-	var a2 A
-
-	err = Read(b, binary.LittleEndian, &a2)
+	err = Read(b, binary.LittleEndian, s2)
 
 	if err != nil {
 		t.Errorf("error unpacking: %s", err)
 	}
 
-	if !reflect.DeepEqual(a, a2) {
-		t.Errorf("unpacking failed: expected: %v got: %v\n", a, a2)
+	re1 := reflect.ValueOf(e1)
+	rs2 := reflect.ValueOf(s2)
+
+	if !reflect.DeepEqual(re1.Interface(), rs2.Elem().Interface()) {
+		t.Errorf("unpacking failed: expected: %v got: %v\n", s1, s2)
 	}
 }
