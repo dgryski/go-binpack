@@ -52,28 +52,28 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 					err = ErrMissingLenPrefix
 
 				case "uint8":
-					err = Write(w, byteorder, uint8(slen))
+					err = binary.Write(w, byteorder, uint8(slen))
 
 				case "uint16":
-					err = Write(w, byteorder, uint16(slen))
+					err = binary.Write(w, byteorder, uint16(slen))
 
 				case "uint32":
-					err = Write(w, byteorder, uint32(slen))
+					err = binary.Write(w, byteorder, uint32(slen))
 
 				case "uint64":
-					err = Write(w, byteorder, uint64(slen))
+					err = binary.Write(w, byteorder, uint64(slen))
 
 				case "int8":
-					err = Write(w, byteorder, int8(slen))
+					err = binary.Write(w, byteorder, int8(slen))
 
 				case "int16":
-					err = Write(w, byteorder, int16(slen))
+					err = binary.Write(w, byteorder, int16(slen))
 
 				case "int32":
-					err = Write(w, byteorder, int32(slen))
+					err = binary.Write(w, byteorder, int32(slen))
 
 				case "int64":
-					err = Write(w, byteorder, int64(slen))
+					err = binary.Write(w, byteorder, int64(slen))
 
 				default:
 					err = ErrUnknownLenPrefix
