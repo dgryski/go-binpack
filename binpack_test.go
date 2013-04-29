@@ -21,12 +21,14 @@ func TestStructs(t *testing.T) {
 		Slice      []B       `binpack:"lenprefix=int16"`
 		EmptySlice []int16   `binpack:"lenprefix=int16"`
 		F32        []float32 `binpack:"lenprefix=uint8"`
+		A4Int8     [4]int8
 	}
 
 	a := A{
 		[]B{{0, 1, []byte("hello")}, {2, 3, []byte("world")}},
 		[]int16{},
 		[]float32{123.45, 543.21},
+		[4]int8{11, 12, 13, 14},
 	}
 
 	var a2 A
