@@ -87,3 +87,19 @@ func packUnpack(t *testing.T, s1 interface{}, s2 interface{}, e1 interface{}) {
 		t.Errorf("unpacking failed: expected: %v got: %v\n", s1, s2)
 	}
 }
+
+func TestErrors(t *testing.T) {
+
+	var a struct {
+		S []int `binpack:"lenprefix=uint8"`
+	}
+
+	a.S = make([]int, 256)
+
+	b := &bytes.Buffer{}
+	err := Write(b, binary.LittleEndian, a)
+
+	if err != ErrSliceTooLarge {
+		t.Errorf("got wrong err: expected: ErrSliceTooLarge got: %s\n", err)
+	}
+}

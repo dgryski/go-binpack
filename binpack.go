@@ -48,6 +48,18 @@ import (
 var ErrMissingLenPrefix = errors.New("struct with embedded slice missing value for lenprefix tag")
 var ErrUnknownLenPrefix = errors.New("unknown lenprefix pack type")
 var ErrSliceTooSmall = errors.New("not enough space in slice")
+var ErrSliceTooLarge = errors.New("slice too large for lenprefix type")
+
+var maxSliceLen = map[string]uint64{
+	"uint8":  math.MaxUint8,
+	"uint16": math.MaxUint16,
+	"uint32": math.MaxUint32,
+	"uint64": math.MaxUint64,
+	"int8":   math.MaxInt8,
+	"int16":  math.MaxInt16,
+	"int32":  math.MaxInt32,
+	"int64":  math.MaxInt64,
+}
 
 // Write writes the binary representation of data to w.
 func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
@@ -83,13 +95,24 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
 			// if we have a slice embedded in a struct, get the struct tag that tells us how to write the (unknown) length before the contents
 			if f.Type.Kind() == reflect.Slice {
-				slen := fval.Len()
+				slen := uint64(fval.Len())
 				opts := parseTag(f.Tag)
+
+				if opts.lenprefix == "" {
+					return ErrMissingLenPrefix
+				}
+
+				maxlen, ok := maxSliceLen[opts.lenprefix]
+				if !ok {
+					return ErrUnknownLenPrefix
+				}
+
+				if slen > maxlen {
+					return ErrSliceTooLarge
+				}
+
 				var err error
 				switch opts.lenprefix {
-				case "":
-					err = ErrMissingLenPrefix
-
 				case "uint8":
 					err = binary.Write(w, byteorder, uint8(slen))
 
@@ -113,9 +136,6 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
 				case "int64":
 					err = binary.Write(w, byteorder, int64(slen))
-
-				default:
-					err = ErrUnknownLenPrefix
 				}
 
 				if err != nil {
