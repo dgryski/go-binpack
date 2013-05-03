@@ -73,6 +73,11 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
 	switch v.Kind() {
 	case reflect.Array, reflect.Slice:
+		if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
+			_, err := w.Write(v.Bytes())
+			return err
+		}
+
 		l := v.Len()
 		for i := 0; i < l; i++ {
 			err := Write(w, byteorder, v.Index(i).Interface())
@@ -247,6 +252,14 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 
 	case reflect.Array, reflect.Slice:
 		l := v.Len()
+		if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
+			b := make([]byte, l, l)
+			_, err := r.Read(b)
+			if err == nil {
+				v.SetBytes(b)
+			}
+			return err
+		}
 		for i := 0; i < l; i++ {
 			err := unpack(r, byteorder, v.Index(i))
 			if err != nil {
