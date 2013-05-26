@@ -103,3 +103,88 @@ func TestErrors(t *testing.T) {
 		t.Errorf("got wrong err: expected: ErrSliceTooLarge got: %s\n", err)
 	}
 }
+
+func TestEndian(t *testing.T) {
+
+	var expected []byte
+
+	var bigaIn, bigaOut struct {
+		Little []uint16 `binpack:"lenprefix=uint16,endian=little"`
+		Big    uint32
+	}
+
+	bigaIn.Little = []uint16{0x1122, 0x3344}
+	bigaIn.Big = 0x11223344
+
+	b := &bytes.Buffer{}
+	err := Write(b, binary.BigEndian, bigaIn)
+
+	if err != nil {
+		t.Errorf("error packing: %s", err)
+	}
+
+	expected = []byte{0x02, 0x00, 0x22, 0x11, 0x44, 0x33, 0x11, 0x22, 0x33, 0x44}
+
+	if !bytes.Equal(b.Bytes(), expected) {
+		t.Errorf("failed endian-tag packing: got `% 02x` expected=`% 02x`", b.Bytes(), expected)
+	}
+
+	err = Read(b, binary.BigEndian, &bigaOut)
+
+	if err != nil {
+		t.Errorf("error unpacking: %s", err)
+	}
+
+	if !reflect.DeepEqual(bigaIn, bigaOut) {
+		t.Errorf("failed endian-tag unpacking: got `%v` expected=`%v`", bigaIn, bigaOut)
+	}
+
+	var littleaIn, littleaOut struct {
+		Little []uint16 `binpack:"lenprefix=uint16"`
+		Big    uint32   `binpack:"endian=big"`
+	}
+
+	littleaIn.Little = []uint16{0x1122, 0x3344}
+	littleaIn.Big = 0x11223344
+
+	b = &bytes.Buffer{}
+	err = Write(b, binary.LittleEndian, littleaIn)
+
+	if err != nil {
+		t.Errorf("error packing: %s", err)
+	}
+
+	if !bytes.Equal(b.Bytes(), expected) {
+		t.Errorf("failed endian-tag packing: got `% 02x` expected=`% 02x`", b.Bytes(), expected)
+	}
+
+	err = Read(b, binary.LittleEndian, &littleaOut)
+
+	if err != nil {
+		t.Errorf("error unpacking: %s", err)
+	}
+
+	if !reflect.DeepEqual(littleaIn, littleaOut) {
+		t.Errorf("failed endian-tag unpacking: got `%v` expected=`%v`", littleaIn, littleaOut)
+	}
+
+	var a struct {
+		Little []uint16 `binpack:"lenprefix=uint16,endian=little"`
+		Big    uint32   `binpack:"endian=big"`
+	}
+
+	a.Little = []uint16{0x1122, 0x3344}
+	a.Big = 0x11223344
+
+	b = &bytes.Buffer{}
+	err = Write(b, nil, a)
+
+	if err != nil {
+		t.Errorf("error packing: %s", err)
+	}
+
+	if !bytes.Equal(b.Bytes(), expected) {
+		t.Errorf("failed endian-tag packing: got `% 02x` expected=`% 02x`", b.Bytes(), expected)
+	}
+
+}

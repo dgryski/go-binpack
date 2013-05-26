@@ -24,7 +24,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 /*
 
 Package binpack implements translation between numbers and byte
@@ -59,6 +58,13 @@ with zero padding, an equivalent declaration is:
 The encoding of Field will be a uint8 indicating how many inner slices
 there are, and the inner []byte slices will be length-prefixed with a
 uint16
+
+To use a specific endianness for a particular field, you can use the "endian" tag.
+
+   Field []struct { Little uint32 `binpack:"endian=little"` }
+
+Note that the endian tag also affects the length-prefix, if any, and applies to
+all elements of a struct it is attached to.
 
 */
 package binpack
@@ -125,10 +131,15 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 
 			fval := v.Field(i)
 
+			opts := parseTag(f.Tag)
+			var bOrder binary.ByteOrder = byteorder
+			if opts.endian != nil {
+				bOrder = opts.endian
+			}
+
 			// if we have a slice embedded in a struct, get the struct tag that tells us how to write the (unknown) length before the contents
 			if f.Type.Kind() == reflect.Slice {
 				slen := uint64(fval.Len())
-				opts := parseTag(f.Tag)
 
 				if opts.lenprefix == "" {
 					return ErrMissingLenPrefix
@@ -146,28 +157,28 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 				var err error
 				switch opts.lenprefix {
 				case "uint8":
-					err = binary.Write(w, byteorder, uint8(slen))
+					err = binary.Write(w, bOrder, uint8(slen))
 
 				case "uint16":
-					err = binary.Write(w, byteorder, uint16(slen))
+					err = binary.Write(w, bOrder, uint16(slen))
 
 				case "uint32":
-					err = binary.Write(w, byteorder, uint32(slen))
+					err = binary.Write(w, bOrder, uint32(slen))
 
 				case "uint64":
-					err = binary.Write(w, byteorder, uint64(slen))
+					err = binary.Write(w, bOrder, uint64(slen))
 
 				case "int8":
-					err = binary.Write(w, byteorder, int8(slen))
+					err = binary.Write(w, bOrder, int8(slen))
 
 				case "int16":
-					err = binary.Write(w, byteorder, int16(slen))
+					err = binary.Write(w, bOrder, int16(slen))
 
 				case "int32":
-					err = binary.Write(w, byteorder, int32(slen))
+					err = binary.Write(w, bOrder, int32(slen))
 
 				case "int64":
-					err = binary.Write(w, byteorder, int64(slen))
+					err = binary.Write(w, bOrder, int64(slen))
 				}
 
 				if err != nil {
@@ -175,7 +186,7 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 				}
 			}
 
-			err := Write(w, byteorder, v.Field(i).Interface())
+			err := Write(w, bOrder, v.Field(i).Interface())
 			if err != nil {
 				return err
 			}
@@ -203,6 +214,7 @@ func Read(r io.Reader, byteorder binary.ByteOrder, data interface{}) error {
 type packopts struct {
 	skip      bool
 	lenprefix string
+	endian    binary.ByteOrder
 }
 
 func parseTag(tag reflect.StructTag) packopts {
@@ -216,6 +228,17 @@ func parseTag(tag reflect.StructTag) packopts {
 		}
 		if strings.HasPrefix(t, "lenprefix=") {
 			opts.lenprefix = strings.TrimPrefix(t, "lenprefix=")
+		}
+		if strings.HasPrefix(t, "endian=") {
+			endian := strings.TrimPrefix(t, "endian=")
+			switch endian {
+			case "little":
+				opts.endian = binary.LittleEndian
+			case "big":
+				opts.endian = binary.BigEndian
+			default:
+				panic("unknown endian type in struct: " + endian)
+			}
 		}
 	}
 
@@ -303,6 +326,11 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 
 			opts := parseTag(f.Tag)
 
+			var bOrder binary.ByteOrder = byteorder
+			if opts.endian != nil {
+				bOrder = opts.endian
+			}
+
 			if opts.skip || f.Name == "_" || f.PkgPath != "" {
 				continue
 			}
@@ -319,42 +347,42 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 
 				case "uint8":
 					var n uint8
-					err = binary.Read(r, byteorder, &n)
+					err = binary.Read(r, bOrder, &n)
 					slen = int(n)
 
 				case "uint16":
 					var n uint16
-					err = binary.Read(r, byteorder, &n)
+					err = binary.Read(r, bOrder, &n)
 					slen = int(n)
 
 				case "uint32":
 					var n uint32
-					err = binary.Read(r, byteorder, &n)
+					err = binary.Read(r, bOrder, &n)
 					slen = int(n)
 
 				case "uint64":
 					var n uint64
-					err = binary.Read(r, byteorder, &n)
+					err = binary.Read(r, bOrder, &n)
 					slen = int(n)
 
 				case "int8":
 					var n int8
-					err = binary.Read(r, byteorder, &n)
+					err = binary.Read(r, bOrder, &n)
 					slen = int(n)
 
 				case "int16":
 					var n int16
-					err = binary.Read(r, byteorder, &n)
+					err = binary.Read(r, bOrder, &n)
 					slen = int(n)
 
 				case "int32":
 					var n int32
-					err = binary.Read(r, byteorder, &n)
+					err = binary.Read(r, bOrder, &n)
 					slen = int(n)
 
 				case "int64":
 					var n int64
-					err = binary.Read(r, byteorder, &n)
+					err = binary.Read(r, bOrder, &n)
 					slen = int(n)
 
 				default:
@@ -377,7 +405,7 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 				fval.SetLen(slen) // handle case where they passed in a non-nil slice
 			}
 
-			err = unpack(r, byteorder, fval)
+			err = unpack(r, bOrder, fval)
 			if err != nil {
 				return err
 			}
