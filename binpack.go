@@ -304,7 +304,7 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 		l := v.Len()
 		if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
 			b := make([]byte, l, l)
-			_, err := r.Read(b)
+			_, err := io.ReadFull(r, b)
 			if err == nil {
 				v.SetBytes(b)
 			}
