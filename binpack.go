@@ -166,7 +166,7 @@ func Write(w io.Writer, byteorder binary.ByteOrder, data interface{}) error {
 					err = binary.Write(w, bOrder, uint32(slen))
 
 				case "uint64":
-					err = binary.Write(w, bOrder, uint64(slen))
+					err = binary.Write(w, bOrder, slen)
 
 				case "int8":
 					err = binary.Write(w, bOrder, int8(slen))
@@ -222,7 +222,7 @@ func parseTag(tag reflect.StructTag) packopts {
 
 	bpTag := tag.Get("binpack")
 
-	for _, t := range strings.Split(string(bpTag), ",") {
+	for _, t := range strings.Split(bpTag, ",") {
 		if t == "-" {
 			opts.skip = true
 		}
@@ -268,7 +268,7 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 	case reflect.Uint64:
 		var n uint64
 		err = binary.Read(r, byteorder, &n)
-		v.SetUint(uint64(n))
+		v.SetUint(n)
 
 	case reflect.Int8:
 		var n int8
@@ -288,7 +288,7 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 	case reflect.Int64:
 		var n int64
 		err = binary.Read(r, byteorder, &n)
-		v.SetInt(int64(n))
+		v.SetInt(n)
 
 	case reflect.Float32:
 		var n uint32
@@ -303,15 +303,15 @@ func unpack(r io.Reader, byteorder binary.ByteOrder, v reflect.Value) error {
 	case reflect.Array, reflect.Slice:
 		l := v.Len()
 		if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
-			b := make([]byte, l, l)
-			_, err := io.ReadFull(r, b)
+			b := make([]byte, l)
+			_, err = io.ReadFull(r, b)
 			if err == nil {
 				v.SetBytes(b)
 			}
 			return err
 		}
 		for i := 0; i < l; i++ {
-			err := unpack(r, byteorder, v.Index(i))
+			err = unpack(r, byteorder, v.Index(i))
 			if err != nil {
 				return err
 			}
